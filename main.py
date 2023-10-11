@@ -1,11 +1,39 @@
 import logging
 logging.basicConfig(level=logging.INFO)
+import unittest
+
 
 import pinecone_helper
 import openai_helper
 
 if __name__ == "__main__":
     try:
+
+
+
+        #   I need functions that will print out the entire vectordb
+        #   I need functions that will print out all data in vectordb that match a string query
+        #   I need functions that will print out all data in vectordb that has a id that contains a given string
+        #   I need functions that will delete an entire docarray object scope based on its id from the vectordb
+        #   I need functions that will delete all data in the vectordb
+        #   I need functions that will delete all data in the vectordb that matches a given string for its vectors id
+        #   I need functions that will query the vectordb for all matches of given string in vectors id
+        #   I need functions that will query for an entire docarray object based on id matching for vector ids
+        #   I need functions that will update an entire docarray object in the vectordb with new information
+        #   I need functions that will update a vector embedding given its id and an updated embedding  (may not be needed or possible)
+
+        #   I need functions for storing large amounts of data into the vectordb either as strings json or docarray
+
+
+
+
+        #   I have functions that will store a docarray into a vectordb
+        #   I have functions that create embeddings from strings 
+        #   I have docarrays that deal with embeddings internally 
+
+
+
+
         logging.info("Initializing Pinecone.")
         pinecone_helper.initialize_pinecone()
 
@@ -15,8 +43,20 @@ if __name__ == "__main__":
         logging.info(f"\nInitializing index '{index_name}'...")
         pinecone_helper.ensure_index_exists(index_name, dimension=dimension)
 
+
+        ids_to_delete = [
+            'f693a89d9f8ce0c257d6ce05378d4755_doc'
+            
+        ]
+
+        pinecone_helper.delete_vectors(index_name, ids_to_delete)
+        print("Deleted ")
+
+
+
         sentence = "eastridge village by the waterfall"
-        word = "eastridge village"
+        # word = "eastridge village"
+        word = "Bow"
 
         logging.info(f"\nGenerating embedding for sentence: {sentence}")
         embedded_sentence = openai_helper.generate_embedding(sentence)
