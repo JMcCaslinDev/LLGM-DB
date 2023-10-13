@@ -30,19 +30,29 @@ def ensure_index_exists(index_name, dimension=1536): #   works
 
 
 
-#   Store vector in pinecone from string, handles single id & string or list of both.
-def store_strings_in_pinecone(index_name: str, ids: Union[str, List[str]], texts: Union[str, List[str]]):
+# Store vector in pinecone from string, handles single id & string or list of both.
+def store_strings_in_pinecone(index_name: str, ids: Union[str, List[str]], texts: Union[str, List[str]]):  
     try:
-        index = pinecone.Index(index_name)
-        
+        # Convert to list if single values are passed
         if isinstance(ids, str):
             ids = [ids]
         if isinstance(texts, str):
             texts = [texts]
-        
-        embeddings = [openai_helper.generate_embedding(text) for text in texts]
-        
+
+        index = pinecone.Index(index_name)
+        embeddings = openai_helper.generate_embeddings(texts)  # This now returns a list of embeddings
+
+        if embeddings is None:
+            print(f"Failed to generate embeddings for texts.")
+            return
+
         vector_dicts = [{'id': id, 'values': vector} for id, vector in zip(ids, embeddings)]
+
+        # Print debug info
+        print(f"Storing with IDs: {ids}")
+        truncated_embeddings = [[round(x, 4) for x in emb[:10]] for emb in embeddings]
+        print(f"Storing with first 10 elements of Embeddings: {truncated_embeddings}")
+
         index.upsert(vector_dicts)
         
         print(f"Vectors stored successfully in index '{index_name}'")
@@ -51,8 +61,9 @@ def store_strings_in_pinecone(index_name: str, ids: Union[str, List[str]], texts
 
 
 
+
 #   Store vector in pinecone vector, handles single id & vector or list of both.
-def store_vectors_in_pinecone(index_name: str, ids: Union[str, List[str]], vectors: Union[List[float], List[List[float]]]):
+def store_vectors_in_pinecone(index_name: str, ids: Union[str, List[str]], vectors: Union[List[float], List[List[float]]]): #   Should work but untested
     try:
         index = pinecone.Index(index_name)
         
@@ -121,7 +132,7 @@ def delete_all_vectors_except(index_name: str, num_dimensions: int, exclude_ids)
 
 
 #   untested if working     this doesnt rlly update it deletes then stores a new one idk if its intended this way
-def update_vector(index_name, id, new_vector):
+def update_vector(index_name, id, new_vector):  #   Should work now untested 
     try:
         #delete_vectors_by_id(index_name, [id]) #   this should not be needed based on pinecone docs upsert will update if already in index and wont make duplicates.
         store_vectors_in_pinecone(index_name, [id], [new_vector])
@@ -132,7 +143,7 @@ def update_vector(index_name, id, new_vector):
 
 
 #   Search the vectordb for a similiar match to the embedding you want to look up
-def query_index(index_name, query_vector, top_k=10, threshold=0.7):  # Added threshold parameter
+def query_index(index_name, query_vector, top_k=10, threshold=0.7):  #  Works
     try:
         index = pinecone.Index(index_name)
         results = index.query(queries=[query_vector], top_k=top_k)
@@ -160,7 +171,7 @@ def query_index(index_name, query_vector, top_k=10, threshold=0.7):  # Added thr
 
 
 #   Return list of ids from index unsure amount of them
-def get_ids_from_query(index_name, input_vector):   #   Works
+def get_ids_from_query(index, input_vector):   #   Works
     """
     Fetches IDs from Pinecone using a query vector.
 
@@ -173,7 +184,7 @@ def get_ids_from_query(index_name, input_vector):   #   Works
     """
     print("Searching Pinecone...")
     # Query Pinecone with the input vector, and get up to 10000 IDs.
-    results = index_name.query(queries=[input_vector], top_k=10000, include_values=False)
+    results = index.query(queries=[input_vector], top_k=10000, include_values=False)
     ids = set()
     
     # Iterate through the query results and add IDs to the set.
@@ -184,7 +195,7 @@ def get_ids_from_query(index_name, input_vector):   #   Works
 
 
 #   Return all the ids in the vector index
-def get_all_ids_from_index(index_name, num_dimensions, namespace=""):   #   Works
+def get_all_ids_from_index(index, num_dimensions, namespace=""):   #   Works
     """
     Fetches all IDs from a Pinecone index by continuously querying it with random vectors.
 
@@ -197,7 +208,7 @@ def get_all_ids_from_index(index_name, num_dimensions, namespace=""):   #   Work
         set: A set of all IDs in the index.
     """
     # Get the total number of vectors in the index.
-    num_vectors = index_name.describe_index_stats()["namespaces"][namespace]['vector_count']
+    num_vectors = index.describe_index_stats()["namespaces"][namespace]['vector_count']
     all_ids = set()
     
     # Keep querying until we have fetched all IDs.
@@ -209,7 +220,7 @@ def get_all_ids_from_index(index_name, num_dimensions, namespace=""):   #   Work
         print("Creating random vector...")
         
         # Fetch IDs that are close to the random vector.
-        ids = get_ids_from_query(index_name, input_vector)
+        ids = get_ids_from_query(index, input_vector)
         print("Getting IDs from a vector query...")
         
         # Update the master list of IDs.
@@ -228,3 +239,19 @@ def get_all_ids_from_index(index_name, num_dimensions, namespace=""):   #   Work
     check is not based on the vector values but on the IDs. If the ID is the same, the vector will be 
     updated regardless of whether the vector values are the same or different.
     """
+
+
+
+def ensure_context_vector_exists(index_name: str, dimension: int,   context_vector_id: str, context_text: str): #   works
+    index = pinecone.Index(index_name)
+    existing_ids = get_all_ids_from_index(index, dimension)  # Assumes you have a function to get all IDs
+
+    if context_vector_id in existing_ids:
+        print(f"Context vector '{context_vector_id}' already exists in index '{index_name}'.")
+        return "exists"
+    else:
+        store_strings_in_pinecone(index_name, [context_vector_id], [context_text])
+        print(f"Created context vector '{context_vector_id}' in index '{index_name}'.")
+        return "created"
+
+

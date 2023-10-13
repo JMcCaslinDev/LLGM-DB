@@ -14,6 +14,7 @@ if __name__ == "__main__":
         index_name = "llgm"
         id = "item_1"
         string = "Excalibur is a legendary sword found in Arthurian legends. It's a magical weapon."
+        string2 = "Builder's Shield is a magical shield embowed with the power of creation and offers the ultimate utility."
         dimension = 1536  # Update this to match the dimension of your embeddings
         context_vector_id = "context_vector"
         logging.info(f"\nInitializing index '{index_name}'...")
@@ -22,37 +23,36 @@ if __name__ == "__main__":
         #   Begin test code here    ------------
         print("\nBegin Testing\n")
 
-        print("Testing delete all vectors functions")
+        # print("Testing delete all vectors functions")
         # pinecone_helper.delete_all_vectors(index_name)  #   CAREFUL DELETES ALL VECTORS
 
 
-        # Sample D&D item based on the item.schema.json
-        sample_item = {
-            "id": 1,
-            "name": "Excalibur",
-            "weight": 10,
-            "description": "A legendary sword.",
-            "magic": True,
-            "source": {
-                "text": "Arthurian Legends",
-                "note": "From ancient mythology",
-                "href": "https://example.com/arthurian-legends"
-            }
-        }
-
-        
-
-        # Store the sample item in vectordb
-        pinecone_helper.store_strings_in_pinecone(index_name, id, string)
-        pinecone_helper.store_strings_in_pinecone(index_name, "item_2", string)
-        pinecone_helper.store_strings_in_pinecone(index_name, "item_3", string)
-
-        #   Store the sample context_vector for testing 
-        pinecone_helper.store_strings_in_pinecone(index_name, context_vector_id, "I am context vector for story telling history.")
-
+        # # Sample D&D item based on the item.schema.json
+        # sample_item = {
+        #     "id": 1,
+        #     "name": "Excalibur",
+        #     "weight": 10,
+        #     "description": "A legendary sword.",
+        #     "magic": True,
+        #     "source": {
+        #         "text": "Arthurian Legends",
+        #         "note": "From ancient mythology",
+        #         "href": "https://example.com/arthurian-legends"
+        #     }
+        # }
 
         #   Test out delete_all_except_ids function
         pinecone_helper.delete_all_vectors_except(index_name, dimension, context_vector_id)
+
+
+        # Store the sample item in vectordb
+        pinecone_helper.store_strings_in_pinecone(index_name, id, string)
+        pinecone_helper.store_strings_in_pinecone(index_name, ["item_2", "item_3"], [string, string2])
+        # pinecone_helper.store_strings_in_pinecone(index_name, "item_3", string)
+
+        context_vector_status = pinecone_helper.ensure_context_vector_exists(index_name, dimension, context_vector_id, "I am context vector for story telling history.")
+        print("\ncontext_vector_status", context_vector_status, "\n")
+
 
 
 
@@ -89,7 +89,7 @@ if __name__ == "__main__":
         # logging.info(f"\nGenerating embedding for sentence: {sentence}")
         # embedded_sentence = openai_helper.generate_embedding(sentence)
         logging.info(f"\nGenerating embedding for word: {word}")
-        embedded_word = openai_helper.generate_embedding(word)
+        embedded_word = openai_helper.generate_embeddings(word)
 
         # # After generating embeddings
         # if embedded_sentence is not None and embedded_word is not None:
